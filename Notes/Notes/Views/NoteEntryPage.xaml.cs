@@ -24,17 +24,13 @@ namespace Notes.Views
             BindingContext = new Note();
         }
 
-        void LoadNote(string filename)
+        async void LoadNote(string itemId)
         {
             try
             {
+                int id = Convert.ToInt32(itemId);
                 // Retrieve the note and set it as the BindingContext of the page.
-                Note note = new Note
-                {
-                    Filename = filename,
-                    Text = File.ReadAllText(filename),
-                    Date = File.GetCreationTime(filename)
-                };
+                Note note = await App.Database.GetNoteAsync(id);
                 BindingContext = note;
             }
             catch (Exception)
@@ -46,17 +42,10 @@ namespace Notes.Views
         async void OnSaveButtonClicked(object sender, EventArgs e)
         {
             var note = (Note)BindingContext;
-
-            if (string.IsNullOrWhiteSpace(note.Filename))
+            note.Date = DateTime.UtcNow;
+            if (!string.IsNullOrWhiteSpace(note.Text))
             {
-                // Save the file.
-                var filename = Path.Combine(App.FolderPath, $"{Path.GetRandomFileName()}.notes.txt");
-                File.WriteAllText(filename, note.Text);
-            }
-            else
-            {
-                // Update the file.
-                File.WriteAllText(note.Filename, note.Text);
+                await App.Database.SaveNoteAsync(note);
             }
 
             // Navigate backwards
@@ -66,12 +55,7 @@ namespace Notes.Views
         async void OnDeleteButtonClicked(object sender, EventArgs e)
         {
             var note = (Note)BindingContext;
-
-            // Delete the file.
-            if (File.Exists(note.Filename))
-            {
-                File.Delete(note.Filename);
-            }
+            await App.Database.DeleteNoteAsync(note);
 
             // Navigate backwards
             await Shell.Current.GoToAsync("..");
